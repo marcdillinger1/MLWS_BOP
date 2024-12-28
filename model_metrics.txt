@@ -1,0 +1,16 @@
+Modelltraining mit XGBoost: Leistungsmetriken und Hyperparameter
+
+Beste Hyperparameter:
+n_estimators: 200 - Anzahl der Bäume im Modell.
+max_depth: 3 - Maximale Tiefe der Entscheidungsbäume.
+learning_rate: 0.2 - Lernrate des Modells.
+subsample: 1.0 - Prozentsatz der Trainingsdaten, die in jedem Baum verwendet werden.
+colsample_bytree: 0.8 - Prozentsatz der Features, die bei jedem Baum verwendet werden.
+min_child_weight: 1 - Mindestanzahl an Instanzen, um einen neuen Split zu erzeugen.
+
+Leistungsmetriken:
+Durchschnittlicher MSE (Mean Squared Error): 1.63 - Misst den durchschnittlichen quadratischen Fehler zwischen Vorhersage und tatsächlichem Wert.
+Durchschnittlicher MAPE (Mean Absolute Percentage Error): 3.01% - Misst den durchschnittlichen prozentualen Fehler.
+Durchschnittlicher MAE (Mean Absolute Error): 67835101.99 - Misst den durchschnittlichen absoluten Fehler.
+Durchschnittlicher R² (R-Quadrat): 0.51 - Misst, wie gut das Modell die Varianz der Zielvariable erklärt.
+Durchschnittlicher RMSE (Root Mean Squared Error): 1.28 - Misst die Quadratwurzel des durchschnittlichen quadratischen Fehlers.

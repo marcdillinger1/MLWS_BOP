@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 
 
-def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
+def train_xgboost_model_with_cv(data_file, target_column, model_output_file, metrics_output_file):
     # Datensatz laden
     df = pd.read_csv(data_file)
 
@@ -31,11 +31,9 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
     # Cross-Validation manuell durchführen
     n_splits = 5
     fold_size = len(X_scaled) // n_splits
-    mse_scores = []
-    mape_scores = []
-    mae_scores = []
-    r2_scores = []
-    rmse_scores = []
+    best_mse = float("inf")
+    best_params = None
+    avg_mse = avg_mape = avg_mae = avg_r2 = avg_rmse = None
 
     # Hyperparameter für das Modell definieren (manuelles Tuning)
     param_grid = {
@@ -46,9 +44,6 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
         'colsample_bytree': [0.8, 1.0],
         'min_child_weight': [1, 5],
     }
-
-    best_mse = float("inf")
-    best_params = None
 
     # Manuelles Hyperparameter-Tuning und Cross-Validation
     for n_estimators in param_grid['n_estimators']:
@@ -93,26 +88,25 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
 
                                 # Metriken berechnen
                                 mse = mean_squared_error(y_val, y_pred_log)
-                                mape = mean_absolute_percentage_error(np.expm1(y_val), np.expm1(y_pred_log))  # Rücktransformieren auf Originalskala
+                                mape = mean_absolute_percentage_error(np.expm1(y_val), np.expm1(
+                                    y_pred_log))  # Rücktransformieren auf Originalskala
                                 mae = mean_absolute_error(np.expm1(y_val), np.expm1(y_pred_log))
                                 r2 = r2_score(np.expm1(y_val), np.expm1(y_pred_log))
                                 rmse = np.sqrt(mse)
 
-                                # Ergebnisse für jede Metrik speichern
                                 fold_mse.append(mse)
                                 fold_mape.append(mape)
                                 fold_mae.append(mae)
                                 fold_r2.append(r2)
                                 fold_rmse.append(rmse)
 
-                            # Durchschnitt der Metriken berechnen
+                            # Durchschnittswerte der Metriken für das aktuelle Modell
                             avg_mse = np.mean(fold_mse)
                             avg_mape = np.mean(fold_mape)
                             avg_mae = np.mean(fold_mae)
                             avg_r2 = np.mean(fold_r2)
                             avg_rmse = np.mean(fold_rmse)
 
-                            # Ausgabe der Metriken
                             print(f"Hyperparameter: n_estimators={n_estimators}, max_depth={max_depth}, "
                                   f"learning_rate={learning_rate}, subsample={subsample}, "
                                   f"colsample_bytree={colsample_bytree}, min_child_weight={min_child_weight}")
@@ -146,11 +140,41 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
     final_model.save_model(model_output_file)
     print(f"Modell wurde gespeichert unter {model_output_file}")
 
+    # Textdatei mit den Metriken und besten Hyperparametern speichern
+    with open(metrics_output_file, 'w') as f:
+        f.write("Modelltraining mit XGBoost: Leistungsmetriken und Hyperparameter\n\n")
+
+        f.write("Beste Hyperparameter:\n")
+        f.write(f"n_estimators: {best_params['n_estimators']} - Anzahl der Bäume im Modell.\n")
+        f.write(f"max_depth: {best_params['max_depth']} - Maximale Tiefe der Entscheidungsbäume.\n")
+        f.write(f"learning_rate: {best_params['learning_rate']} - Lernrate des Modells.\n")
+        f.write(
+            f"subsample: {best_params['subsample']} - Prozentsatz der Trainingsdaten, die in jedem Baum verwendet werden.\n")
+        f.write(
+            f"colsample_bytree: {best_params['colsample_bytree']} - Prozentsatz der Features, die bei jedem Baum verwendet werden.\n")
+        f.write(
+            f"min_child_weight: {best_params['min_child_weight']} - Mindestanzahl an Instanzen, um einen neuen Split zu erzeugen.\n\n")
+
+        f.write("Leistungsmetriken:\n")
+        f.write(
+            f"Durchschnittlicher MSE (Mean Squared Error): {avg_mse:.2f} - Misst den durchschnittlichen quadratischen Fehler zwischen Vorhersage und tatsächlichem Wert.\n")
+        f.write(
+            f"Durchschnittlicher MAPE (Mean Absolute Percentage Error): {avg_mape:.2f}% - Misst den durchschnittlichen prozentualen Fehler.\n")
+        f.write(
+            f"Durchschnittlicher MAE (Mean Absolute Error): {avg_mae:.2f} - Misst den durchschnittlichen absoluten Fehler.\n")
+        f.write(
+            f"Durchschnittlicher R² (R-Quadrat): {avg_r2:.2f} - Misst, wie gut das Modell die Varianz der Zielvariable erklärt.\n")
+        f.write(
+            f"Durchschnittlicher RMSE (Root Mean Squared Error): {avg_rmse:.2f} - Misst die Quadratwurzel des durchschnittlichen quadratischen Fehlers.\n")
+
+    print(f"Modell- und Metrikeninformationen wurden gespeichert unter {metrics_output_file}")
+
 
 # Wenn dieses Skript direkt ausgeführt wird, wird das Modell trainiert.
 if __name__ == "__main__":
     input_file = 'MLWS_BOP_Dataset_encoded.csv'  # Encodierte CSV-Datei
     target_column = 'Box Office'  # Zielvariable
     output_model_file = 'xgboost_model_with_cv.json'  # Name der gespeicherten Modelldatei
+    metrics_output_file = 'model_metrics.txt'  # Name der Datei für Metriken und Hyperparameter
 
-    train_xgboost_model_with_cv(input_file, target_column, output_model_file)
+    train_xgboost_model_with_cv(input_file, target_column, output_model_file, metrics_output_file)
