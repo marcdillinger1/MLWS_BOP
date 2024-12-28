@@ -1,6 +1,6 @@
 import pandas as pd
 import xgboost as xgb
-from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
+from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error, mean_absolute_error, r2_score
 from sklearn.preprocessing import StandardScaler
 import numpy as np
 
@@ -33,6 +33,9 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
     fold_size = len(X_scaled) // n_splits
     mse_scores = []
     mape_scores = []
+    mae_scores = []
+    r2_scores = []
+    rmse_scores = []
 
     # Hyperparameter für das Modell definieren (manuelles Tuning)
     param_grid = {
@@ -68,6 +71,9 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
 
                             fold_mse = []
                             fold_mape = []
+                            fold_mae = []
+                            fold_r2 = []
+                            fold_rmse = []
 
                             # Manuelle Cross-Validation
                             for fold in range(n_splits):
@@ -85,21 +91,34 @@ def train_xgboost_model_with_cv(data_file, target_column, model_output_file):
                                 # Vorhersagen
                                 y_pred_log = model.predict(X_val)
 
-                                # MSE und MAPE berechnen
+                                # Metriken berechnen
                                 mse = mean_squared_error(y_val, y_pred_log)
-                                mape = mean_absolute_percentage_error(np.expm1(y_val), np.expm1(
-                                    y_pred_log))  # Rücktransformieren auf Originalskala
+                                mape = mean_absolute_percentage_error(np.expm1(y_val), np.expm1(y_pred_log))  # Rücktransformieren auf Originalskala
+                                mae = mean_absolute_error(np.expm1(y_val), np.expm1(y_pred_log))
+                                r2 = r2_score(np.expm1(y_val), np.expm1(y_pred_log))
+                                rmse = np.sqrt(mse)
 
+                                # Ergebnisse für jede Metrik speichern
                                 fold_mse.append(mse)
                                 fold_mape.append(mape)
+                                fold_mae.append(mae)
+                                fold_r2.append(r2)
+                                fold_rmse.append(rmse)
 
+                            # Durchschnitt der Metriken berechnen
                             avg_mse = np.mean(fold_mse)
                             avg_mape = np.mean(fold_mape)
+                            avg_mae = np.mean(fold_mae)
+                            avg_r2 = np.mean(fold_r2)
+                            avg_rmse = np.mean(fold_rmse)
 
+                            # Ausgabe der Metriken
                             print(f"Hyperparameter: n_estimators={n_estimators}, max_depth={max_depth}, "
                                   f"learning_rate={learning_rate}, subsample={subsample}, "
                                   f"colsample_bytree={colsample_bytree}, min_child_weight={min_child_weight}")
-                            print(f"Durchschnittlicher MSE: {avg_mse:.2f}, Durchschnittlicher MAPE: {avg_mape:.2f}%")
+                            print(f"Durchschnittlicher MSE: {avg_mse:.2f}, Durchschnittlicher MAPE: {avg_mape:.2f}%, "
+                                  f"Durchschnittlicher MAE: {avg_mae:.2f}, Durchschnittlicher R²: {avg_r2:.2f}, "
+                                  f"Durchschnittlicher RMSE: {avg_rmse:.2f}")
 
                             # Speichern der besten Hyperparameter
                             if avg_mse < best_mse:
